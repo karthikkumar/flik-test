@@ -4,7 +4,7 @@ module.exports = (robot) ->
       room_id = robot.adapter.client.rtm.dataStore.getChannelByName(merge_conflict.room).id
       message =
         {
-          "text": ":no_entry_sign: Merge conflict: <#{merge_conflict.pullUrl}|##{merge_conflict.number} #{merge_conflict.pullTitle}> by #{merge_conflict.author}"
+          "text": ":no_entry_sign: Merge conflict on PR <#{merge_conflict.pullUrl}|##{merge_conflict.pullId} #{merge_conflict.pullTitle}> by #{merge_conflict.author}"
         }
 
       robot.messageRoom room_id, message
