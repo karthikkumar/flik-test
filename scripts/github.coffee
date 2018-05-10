@@ -1,3 +1,4 @@
+token=""
 unmergeablePulls = []
 
 addPullIdToList = (pullId) ->
@@ -13,43 +14,39 @@ removePullIdFromList = (pullId) ->
   unmergeablePulls.splice(indexOfPullId, pullId)
 
 getRequest = (robot, data, callback) ->
-    url = "#{url}/YourRepoName/#{data.repository}/pulls/#{data.pullId}?access_token=#{token}"
-
+    url = "https://api.github.com/repos/karthikkumar/tik-test/pulls/#{data.pullId}"
+    console.log("request url: #{url}")
     robot.http(url)
-      .headers('Accept': 'application/rubyon')
+      .headers('Accept': 'application/json')
       .get() (err, res, body) ->
         callback(err, res, body)
 
 checkMergeStatus = (robot, data) ->
     getRequest robot, data, (err, res, body) ->
       try
+        #TODO handle err
         response = JSON.parse body
         mergeStatus = response.mergeable
-        if addPullIdToList(robot, data.pullId)
-          robot.emit 'merge_conflict', {
-            room: data.room,
-            pullTitle: response.title,
-            author: response.user.login,
-            pullUrl: response.html_url,
-            pullId: response.number
-          }
+        console.log("mergeable : #{mergeStatus}")
+        if (mergeStatus == false)
+          if addPullIdToList(robot, data.pullId)
+            robot.emit 'merge_conflict', {
+              room: data.room,
+              pullTitle: response.title,
+              author: response.user.login,
+              pullUrl: response.html_url,
+              pullId: response.number
+            }
         else if (mergeStatus == 'unknown')
           setTimeout ->
             checkMergeStatus(robot, data)
           , 1000
         else
-          # do something?
+          console.log("Skip!")
       catch error
         robot.emit 'error', error
 
 module.exports = (robot) ->
-  robot.router.post '/hubot/github/:room', (req, res) ->
-    room = req.params.room
-    data = req.body
-
-    console.log("== Pull request data received: #{data.pull_request.number}")
-    res.send 'OK'
-
   robot.router.post '/hubot/github/:room', (req, res) ->
       room = req.params.room
 
@@ -64,6 +61,8 @@ module.exports = (robot) ->
           }
         if (pull_request.pullState == 'open' || pull_request.pullState == 'reopened')
           console.log("PR is open!")
+          checkMergeStatus robot, pull_request
+        res.send 'OK'
       catch error
         robot.emit 'error', error
 
